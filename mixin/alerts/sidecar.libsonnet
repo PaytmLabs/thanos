@@ -11,10 +11,10 @@
           {
             alert: 'ThanosSidecarPrometheusDown',
             annotations: {
-              message: 'Thanos Sidecar {{$labels.job}} {{$labels.pod}} cannot connect to Prometheus.',
+              message: 'Thanos Sidecar {{$labels.job}} cannot connect to Prometheus.',
             },
             expr: |||
-              sum by (job, pod) (thanos_sidecar_prometheus_up{%(selector)s} == 0)
+              max(thanos_sidecar_prometheus_up{%(selector)s}) by (job) == 0
             ||| % thanos.sidecar,
             'for': '5m',
             labels: {
@@ -24,11 +24,12 @@
           {
             alert: 'ThanosSidecarUnhealthy',
             annotations: {
-              message: 'Thanos Sidecar {{$labels.job}} {{$labels.pod}} is unhealthy for {{ $value }} seconds.',
+              message: 'Thanos Sidecar {{$labels.job}} is unhealthy for {{ $value }} seconds.',
             },
             expr: |||
-              count(time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{%(selector)s}) by (job, pod) >= 300) > 0
+              time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{%(selector)s}) by (job) >= 300
             ||| % thanos.sidecar,
+            'for': '5m',
             labels: {
               severity: 'critical',
             },

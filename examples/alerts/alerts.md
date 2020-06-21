@@ -263,18 +263,18 @@ name: thanos-sidecar.rules
 rules:
 - alert: ThanosSidecarPrometheusDown
   annotations:
-    message: Thanos Sidecar {{$labels.job}} {{$labels.pod}} cannot connect to Prometheus.
+    message: Thanos Sidecar {{$labels.job}} cannot connect to Prometheus.
   expr: |
-    sum by (job, pod) (thanos_sidecar_prometheus_up{job=~"thanos-sidecar.*"} == 0)
+    max(thanos_sidecar_prometheus_up{job=~"thanos-sidecar.*"}) by (job) == 0
   for: 5m
   labels:
     severity: critical
 - alert: ThanosSidecarUnhealthy
   annotations:
-    message: Thanos Sidecar {{$labels.job}} {{$labels.pod}} is unhealthy for {{ $value
-      }} seconds.
+    message: Thanos Sidecar {{$labels.job}} is unhealthy for {{ $value }} seconds.
   expr: |
-    count(time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{job=~"thanos-sidecar.*"}) by (job, pod) >= 300) > 0
+    time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{job=~"thanos-sidecar.*"}) by (job) >= 300
+  for: 5m
   labels:
     severity: critical
 ```

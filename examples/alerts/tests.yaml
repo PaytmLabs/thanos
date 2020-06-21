@@ -8,9 +8,11 @@ tests:
 - interval: 1m
   input_series:
   - series: 'thanos_sidecar_last_heartbeat_success_time_seconds{namespace="production", job="thanos-sidecar", pod="thanos-sidecar-pod-0"}'
-    values: '5 10 43 17 11 0 0 0'
+    # Restarts after 15 minutes and takes 11 other minutes to reconnect
+    values: '0 59 119 179 239 299 359 419 479 539 599 659 719 779 839 899 0 0 0 0 0 0 0 0 0 0 0 1559 1619 1679 1739'
   - series: 'thanos_sidecar_last_heartbeat_success_time_seconds{namespace="production", job="thanos-sidecar", pod="thanos-sidecar-pod-1"}'
-    values: '4 9 42 15 10 0 0 0'
+    # Looses connectivity after 15 minutes and takes 11 other minutes to reconnect
+    values: '0 38 98 158 218 278 338 398 458 518 578 638 698 758 818 878 878 878 878 878 878 878 878 878 878 878 878 1538 1598 1658 1718'
   promql_expr_test:
     - expr: time()
       eval_time: 1m
@@ -26,44 +28,43 @@ tests:
       eval_time: 2m
       exp_samples:
         - labels: '{pod="thanos-sidecar-pod-0"}'
-          value: 43
+          value: 119
         - labels: '{pod="thanos-sidecar-pod-1"}'
-          value: 42
+          value: 98
     - expr: max(thanos_sidecar_last_heartbeat_success_time_seconds{job="thanos-sidecar"}) by (pod)
       eval_time: 5m
       exp_samples:
         - labels: '{pod="thanos-sidecar-pod-0"}'
-          value: 0
+          value: 299
         - labels: '{pod="thanos-sidecar-pod-1"}'
-          value: 0
-    - expr: max(thanos_sidecar_last_heartbeat_success_time_seconds{job="thanos-sidecar"}) by (pod)
-      eval_time: 6m
-      exp_samples:
-        - labels: '{pod="thanos-sidecar-pod-0"}'
-          value: 0
-        - labels: '{pod="thanos-sidecar-pod-1"}'
-          value: 0
+          value: 278
     - expr: time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{job="thanos-sidecar"}) by (pod)
       eval_time: 5m
       exp_samples:
         - labels: '{pod="thanos-sidecar-pod-0"}'
-          value: 300
+          value: 1
         - labels: '{pod="thanos-sidecar-pod-1"}'
-          value: 300
+          value: 22
     - expr: time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{job="thanos-sidecar"}) by (pod)
-      eval_time: 6m
+      eval_time: 15m
       exp_samples:
         - labels: '{pod="thanos-sidecar-pod-0"}'
-          value: 360
+          value: 1
         - labels: '{pod="thanos-sidecar-pod-1"}'
-          value: 360
+          value: 22
+    # time() is always greater than 300 in reality, so this should always have a result during restarts
     - expr: time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{job="thanos-sidecar"}) by (pod) >= 300
-      eval_time: 12m
+      eval_time: 16m
       exp_samples:
         - labels: '{pod="thanos-sidecar-pod-0"}'
-          value: 720
+          value: 960
+    - expr: time() - max(thanos_sidecar_last_heartbeat_success_time_seconds{job="thanos-sidecar"}) by (pod) >= 300
+      eval_time: 26m
+      exp_samples:
+        - labels: '{pod="thanos-sidecar-pod-0"}'
+          value: 1560
         - labels: '{pod="thanos-sidecar-pod-1"}'
-          value: 720
+          value: 682
   alert_rule_test:
   - eval_time: 1m
     alertname: ThanosSidecarUnhealthy
@@ -73,22 +74,27 @@ tests:
     alertname: ThanosSidecarUnhealthy
   - eval_time: 5m
     alertname: ThanosSidecarUnhealthy
-    exp_alerts:
-    - exp_labels:
-        severity: critical
-      exp_annotations:
-        message: 'Thanos Sidecar   is unhealthy for 2 seconds.'
-  - eval_time: 6m
+  - eval_time: 15m
+    alertname: ThanosSidecarUnhealthy
+  - eval_time: 20m
+    alertname: ThanosSidecarUnhealthy
+  - eval_time: 21m
+    alertname: ThanosSidecarUnhealthy
+  - eval_time: 25m
     alertname: ThanosSidecarUnhealthy
     exp_alerts:
     - exp_labels:
+        job: thanos-sidecar
         severity: critical
       exp_annotations:
-        message: 'Thanos Sidecar   is unhealthy for 2 seconds.'
-  - eval_time: 12m
+        message: 'Thanos Sidecar thanos-sidecar is unhealthy for 622 seconds.'
+  - eval_time: 26m
     alertname: ThanosSidecarUnhealthy
     exp_alerts:
     - exp_labels:
+        job: thanos-sidecar
         severity: critical
       exp_annotations:
-        message: 'Thanos Sidecar   is unhealthy for 2 seconds.'
+        message: 'Thanos Sidecar thanos-sidecar is unhealthy for 682 seconds.'
+  - eval_time: 27m
+    alertname: ThanosSidecarUnhealthy
